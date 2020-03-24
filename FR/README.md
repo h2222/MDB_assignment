@@ -6,7 +6,7 @@
 `output_FR` running result<br>
 `soc-LiveJournal1Adj.txt` input txt file<br>
 
-### environment
+#### environment
 use `uname -a` check version of Linux<br>
 my env is Linux quickstart.cloudera 2.6.32-w358.el6.x86_64 #1 SMP Fri Feb 22 00:31:26 UTC 2013 x86_64 x86_64 x86_64 GNU/Linux<br>
 
