@@ -113,11 +113,11 @@ class PageRank:
             
 
 if __name__ == "__main__":
-    fp = ['./web-Google.txt', './result_top10.txt'] # start from line 4
-    smaple_fp_scc = ['./sample_test.txt', './result_scc.txt'] # start from line 1
-    smaple_fp_dn = ['./sample_test2.txt', './result_dn.txt'] # start from line 1
-    kvps, pr, node_size= PageRank.load_data(fp[0], start=4)
+    fp = ['./web-Google.txt', './result_top10.txt', 4] # start from line 4
+    smaple_fp_scc = ['./sample_test_scc.txt', './result_scc.txt', 1] # start from line 1
+    smaple_fp_dn = ['./sample_test_dn.txt', './result_dn.txt', 1] # start from line 1
+    kvps, pr, node_size= PageRank.load_data(smaple_fp_scc[0], start=smaple_fp_scc[2])
     page_rank = PageRank(kvps, pr, node_size)
     page_rank.initialize()
     page_rank.compute(num=10)
-    page_rank.save_result(top=10, save_to=fp[1])
+    page_rank.save_result(top=10, save_to=smaple_fp_scc[1])
