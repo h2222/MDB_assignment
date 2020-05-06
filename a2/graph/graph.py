@@ -51,4 +51,5 @@ def pf_graph():
 
 
 if __name__ == "__main__":
+    lsh_graph()
     pf_graph()
