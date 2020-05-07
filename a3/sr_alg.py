@@ -3,7 +3,7 @@
 import os, sys
 from random import randint, shuffle
 import itertools
-
+import copy
 
 
 def sample_data(path, rate):
@@ -24,6 +24,43 @@ def sample_data(path, rate):
     del f
 
     return sample
+
+
+
+
+
+def apriori_v2(data):
+
+    p = 1
+    thresh = 10
+    save = set()
+    static = {}
+    temp = copy.deepcopy(data)
+
+    # print(temp)
+
+    while len(temp) > 2:
+        for line in temp:
+            for i in line:
+                save.add(i)
+
+        cmb = list(itertools.combinations(save, p))
+
+        for c in cmb:
+            for d in data:             
+                if set(c).issubset(set(d)):
+                    if not c in static:
+                        static[c] = 1
+                    else:
+                        static[c] += 1
+
+        static = { k:v for k, v in sorted(static.items(), key=lambda x: x[1], reverse=True) if v >= 10}
+        temp = [list(i) for i in static.keys()]
+
+        # 更新分类处理
+        p += 1        
+        print(temp)
+
 
 
 
@@ -67,8 +104,6 @@ def apriori(data, itemset=None, c=1):
     del data
     # sort and filter
     static = { k:v for k, v in sorted(static.items(), key=lambda x: x[1], reverse=True) if v >= thresh}
-
-
     data = [list(i) for i in static.keys()]
     print(data)
 
@@ -89,4 +124,4 @@ if __name__ == "__main__":
     for data in dataset[:1]:
         print(data)
         sample = sample_data(data, rate=1)
-        print(apriori(sample))
+        apriori_v2(sample)
