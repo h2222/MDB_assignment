@@ -1,127 +1,117 @@
 # coding = utf-8
 
 import os, sys
-from random import randint, shuffle
-import itertools
-import copy
-
-
-def sample_data(path, rate):
-
-    sample = []
-    rannum = [i for i in range(rate)]
-    shuffle(rannum)
-
-    with open(path, encoding='utf-8') as f:
-        for line in f.readlines():
-            s = [i for i in map(int, line.split(' ')[:-1])]
-            r = randint(0, 100)
-            # choose 1% of dataset as sample, when random number == 49, choose it as sample.
-            if r in rannum:
-                sample.append(s)
-    # relase memory
-    # print(sys.getsizeof(f.readlines()))
-    del f
-
-    return sample
+from random import sample
 
 
 
+class SimpleRondomAlg:
+    def __init__(self, rate, thresh):
+        self.rate = rate
+        self.thresh = thresh
 
 
-def apriori_v2(data):
+    def sample(self, path='./data_path'):
+        s = []
+        with open(path, encoding='utf-8') as f:
+            for line in f.readlines():
+                # pre-preparing
+                line2 = [i for i in map(int, line.split(' ')[:-1])]
+                # total * (toal * rate) = num
+                num = int(len(line2)*self.rate)
+                # sample
+                # if num < 1 , set the sample number to 1
+                num = 1 if num < 1 else num
+                ss = list(sample(line2, num))
+                s.append(ss)
+        # relase memory
+        # print(sys.getsizeof(f.readlines()))
+        del f
+        return s
 
-    p = 1
-    thresh = 10
-    save = set()
-    static = {}
-    temp = copy.deepcopy(data)
+    
+    def createC1(self, dataset):
+        C1 = set()
+        for t in sorted(dataset):
+            for i in t:
+                C1.add(i)
 
-    # print(temp)
+        return [frozenset([i]) for i in C1]
 
-    while len(temp) > 2:
-        for line in temp:
-            for i in line:
-                save.add(i)
 
-        cmb = list(itertools.combinations(save, p))
-
-        for c in cmb:
-            for d in data:             
-                if set(c).issubset(set(d)):
-                    if not c in static:
-                        static[c] = 1
+    def filter(self, D, Ck, minsupport):
+        
+        itemset = {}
+        for i in D:
+            for can in Ck:
+                if can <= set(i):
+                    if not can in itemset:
+                        itemset[can] = 1
                     else:
-                        static[c] += 1
+                        itemset[can] += 1
+        
+        numItems = float(len(D))
+        retList = []
+        supportData = {}
 
-        static = { k:v for k, v in sorted(static.items(), key=lambda x: x[1], reverse=True) if v >= 10}
-        temp = [list(i) for i in static.keys()]
+        for k in itemset:
+            # calculate support value
+            support = itemset[k] / numItems
+            # filtering
+            if support >= (minsupport/100):
+                retList += [k]
+            
+            supportData[k] = support
 
-        # 更新分类处理
-        p += 1        
-        print(temp)
+        return retList, supportData
 
 
+    def apriori_gen(self, Lk, k):
+        retList = []
+        lenLk = len(Lk)
 
+        for i in range(lenLk):
+            for j in range(i+1, lenLk):
+                L1 = list(Lk[i])[:k-2]
+                L2 = list(Lk[j])[:k-2]
+                L1.sort(); L2.sort()
+                if L1 == L2:
+                    retList.append(Lk[i] | Lk[j])
 
-def apriori(data, itemset=None, c=1):
+        # print(retList)
+        return retList
+        
 
-    # if c == 4:
-        # return data 
-
-    thresh = 10
-    # step one: filter
+    def run(self, path='data_path'):
+        sample = self.sample(path=path)
+        C = self.createC1(sample)
+        L1, supportData=self.filter(sample, C, self.thresh) 
+        L = [L1]
+        k = 2
+        
+        while(len(L[k-2]) > 0):
+            C = self.apriori_gen(L[k-2], k)
+            Lk, supk = self.filter(sample, C, self.thresh)
+            supportData = supk
+            L.append(Lk)
+            k += 1
     
-    static = {}
-    temp = []
-
-    if itemset ==  None:
-        for i in data:
-            for j in i:
-                temp.append(j)
-    else:
-        for i in itemset:
-            for j in i:
-                temp.append(j)
-    
-    comb = list(itertools.combinations(temp, c))
-
-    print(len(data))
-    print(len(comb))
-    for s in comb:
-        for d in data:
-            print([*s])
-            print(d)
-            if [*s] in d:
-                # print(set(s),set(d))
-                if not s in static:
-                    static[s] = 1
-                else:
-                    static[s] +=1
-
-    print(static)
-
-    del data
-    # sort and filter
-    static = { k:v for k, v in sorted(static.items(), key=lambda x: x[1], reverse=True) if v >= thresh}
-    data = [list(i) for i in static.keys()]
-    print(data)
-
-    # c += 1
-    # apriori(data=data, c=c)
+        return L, supportData
 
 
-    
-
-
-
+            
 if __name__ == "__main__":
 
     p, n, fs = next(os.walk('./dataset'))
-
     dataset = [p +'/'+f for f in fs if not '.gz' in f]
+    sra = SimpleRondomAlg(rate=0.1, thresh=0.5)
+    
 
-    for data in dataset[:1]:
-        print(data)
-        sample = sample_data(data, rate=1)
-        apriori_v2(sample)
+    for data in dataset[2:3]:
+        L, supportData = sra.run(data)
+        print('result:', data)
+        print('-'*50)
+        print(L)
+        print('-'*50)
+        print(supportData)
+        print('-'*50)
