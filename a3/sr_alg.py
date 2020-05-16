@@ -31,20 +31,21 @@ class SimpleRondomAlg:
 
     
     def createC1(self, dataset):
-        C1 = set()
-        for t in sorted(dataset):
-            for i in t:
-                C1.add(i)
-
-        return [frozenset([i]) for i in C1]
+        C1 = []
+        for transaction in dataset:
+            for item in transaction:
+                if not [item] in C1:
+                    C1.append([item])
+        C1 = sorted(C1)
+        return list(map(frozenset, C1))
 
 
     def filter(self, D, Ck, minsupport):
         
         itemset = {}
-        for i in D:
+        for tid in D:
             for can in Ck:
-                if can <= set(i):
+                if can <= tid:
                     if not can in itemset:
                         itemset[can] = 1
                     else:
@@ -60,7 +61,6 @@ class SimpleRondomAlg:
             # filtering
             if support >= (minsupport/100):
                 retList += [k]
-            
             supportData[k] = support
 
         return retList, supportData
@@ -82,17 +82,26 @@ class SimpleRondomAlg:
         return retList
         
 
-    def run(self, path='data_path'):
-        sample = self.sample(path=path)
-        C = self.createC1(sample)
-        L1, supportData=self.filter(sample, C, self.thresh) 
+    def run(self, path='data_path', less_sample_test=False):
+        
+        if not less_sample_test:
+            sample = self.sample(path=path)
+            print(sample[:10])
+            print('sample size:', len(sample))
+        else:
+            sample = [[1, 3, 4], [2, 3, 5], [1, 2, 3, 5], [2, 5]]
+            self.thresh *= 100
+        
+        sample = list(map(set, sample))
+        C1 = self.createC1(sample)
+        L1, supportData=self.filter(sample, C1, self.thresh) 
         L = [L1]
         k = 2
         
         while(len(L[k-2]) > 0):
-            C = self.apriori_gen(L[k-2], k)
-            Lk, supk = self.filter(sample, C, self.thresh)
-            supportData = supk
+            Ck = self.apriori_gen(L[k-2], k)
+            Lk, supk = self.filter(sample, Ck, self.thresh)
+            supportData.update(supk)
             L.append(Lk)
             k += 1
     
@@ -104,14 +113,15 @@ if __name__ == "__main__":
 
     p, n, fs = next(os.walk('./dataset'))
     dataset = [p +'/'+f for f in fs if not '.gz' in f]
-    sra = SimpleRondomAlg(rate=0.1, thresh=0.5)
     
 
-    for data in dataset[2:3]:
-        L, supportData = sra.run(data)
-        print('result:', data)
+    for data in dataset[1:2]:
+        print('dataset:', data)
+        sra = SimpleRondomAlg(rate=0.02, thresh=0.5)
+        L, supportData = sra.run(data, less_sample_test=False)
         print('-'*50)
         print(L)
         print('-'*50)
         print(supportData)
         print('-'*50)
+        del sra
