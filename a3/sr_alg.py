@@ -10,7 +10,6 @@ class SimpleRondomAlg:
         self.rate = rate
         self.thresh = thresh
 
-
     def sample(self, path='./data_path'):
         s = []
         with open(path, encoding='utf-8') as f:
@@ -53,10 +52,10 @@ class SimpleRondomAlg:
                     else:
                         itemset[can] += 1
         
-        numItems = float(len(D))
         retList = []
         supportData = {}
-        
+        numItems = float(len(D))
+        i = 0
         # if len(Ck[0])>1:
         #     print('+=+'*20)
         #     print(itemset)
@@ -64,17 +63,15 @@ class SimpleRondomAlg:
 
         for k in itemset:
             support = itemset[k] / numItems
-            # print(k, 'support:', support, 'total', numItems)
             # filtering
             # if support >= (minsupport/100):    ## 修改thresh hold 规则
-            # if itemset[k] >= 50:
                 # retList += [k]
             supportData[k] = support
-        
-        supportData  = dict(sorted(supportData.items(), key=lambda  x: x[1], reverse=True))
-        
+            i += 1
+
+        supportData  = dict(sorted(supportData.items(), key=lambda  x: x[1], reverse=True))        
         supportData_v2 = {}
-        for _, k in zip(range(10), supportData):
+        for _, k in zip(range(int(i*minsupport)), supportData):
             supportData_v2[k] = supportData[k]
             retList += [k]
 
@@ -105,7 +102,6 @@ class SimpleRondomAlg:
             # print('sample size:', len(sample))
         else:
             sample = [[1, 3, 4], [2, 3, 5], [1, 2, 3, 5], [2, 5]]
-            self.thresh *= 100
         
         sample = list(map(set, sample))
         C1 = self.createC1(sample)
@@ -114,13 +110,13 @@ class SimpleRondomAlg:
         k = 2
 
         print('=+='*20)
-        print(len(C1[0]), ':',C1)
+        print(len(C1[0]), ':',supportData)
 
         while(len(L[k-2]) > 0):
             Ck = self.apriori_gen(L[k-2], k)
             if len(Ck) != 0:
                 print('=+='*50)
-                print(len(Ck[0]), ':', Ck)
+                print(len(Ck[0]), ':',supportData)
             Lk, supk = self.filter(sample, Ck, self.thresh)
             supportData.update(supk)
             L.append(Lk)
@@ -138,7 +134,7 @@ if __name__ == "__main__":
 
     for data in dataset[5:6]:
         print('dataset:', data)
-        sra = SimpleRondomAlg(rate=0.3, thresh=0.6)
+        sra = SimpleRondomAlg(rate=0.3, thresh=0.1)
         L, supportData = sra.run(data, less_sample_test=False)
         print('-'*50)
         print(L[:-1])
