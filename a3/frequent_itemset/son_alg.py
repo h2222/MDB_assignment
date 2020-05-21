@@ -52,7 +52,7 @@ class SONAlg:
                 ss =list(sample(line2, num))
                 s.append(ss)
 
-            print('{0} - {1} sample complete, data is {2}'.format(se[0], se[1], path))
+            print('{0} - {1} sample complete, data is {2}, Process ID:{3}'.format(se[0], se[1], path, os.getpid()))
             del f            
             return s
 
@@ -68,7 +68,6 @@ class SONAlg:
 
 
     def filter(self, D, Ck, minsupport):
-        
         itemset = {}
         for tid in D:
             for can in Ck:
@@ -84,23 +83,13 @@ class SONAlg:
         retList = []
         supportData = {}
         i = 0        
-        # if len(Ck[0])>1:
-        #     print('+=+'*20)
-        #     print(itemset)
-        #     print('+=+'*20)
 
         for k in itemset:
             support = itemset[k] / numItems
-            # print(k, 'support:', support, 'total', numItems)
-            # filtering
-            # if support >= (minsupport/100):    ## 修改thresh hold 规则
-            # if itemset[k] >= 50:
-                # retList += [k]
             supportData[k] = support
             i += 1            
         
         supportData  = dict(sorted(supportData.items(), key=lambda  x: x[1], reverse=True))
-        
         supportData_v2 = {}
         for _, k in zip(range(int(i*minsupport)), supportData):
             supportData_v2[k] = supportData[k]
@@ -137,25 +126,24 @@ class SONAlg:
         L = [L1]
         k = 2
 
-        # print('=+='*20)
-        # print(len(C1[0]), ':',C1)
-
         while(len(L[k-2]) > 0):
             Ck = self.apriori_gen(L[k-2], k)
-            # if len(Ck) != 0:
-            #   print('=+='*50)
-            #   print(len(Ck[0]), ':', Ck)
             Lk, supk = self.filter(self.sample, Ck, self.thresh)
             supportData.update(supk)
             L.append(Lk)
             k += 1
         
-        print('good run SRA')
-        return (L[:-1], supportData)
+        print('good run SRA, Process ID:{}'.format(os.getpid()))
+        return L[:-1]
 
 
 
-    def run(self, path='default'):
+    def run(self, path='default', save_to='default'):
+        
+        if os.path.exists(save_to):
+            os.remove(save_to)
+        open(save_to, 'w', encoding='utf-8-sig')
+        
         p = Pool(self.cpu_num)
         # get splited block 
         process_sl = self.split_block(path=path)        
@@ -176,39 +164,41 @@ class SONAlg:
         multi_sra_r = p2.map(apriori_v2, son_r)  
         p2.close()
         
-        # Map 2
+
+        # Reduce 1
         map1 = set()
         for block in multi_sra_r:
             for item in block:
-                for i in list(item)[2:]:
-                    print(i)           
-                    map1.add(i)
+                for i in item:           
+                        map1.add(i)
         map2 = list(map1)
+        print('results from different parts'+'========'*20, ' \n', map2, '\n', '========'*20)
 
-        print(type(map2))
+        # total data, (0, -1) mean begin to end
+        total = self.sample_data(se=(0, -1), path=path)
+        total = list(map(set, total))
 
-        # Reduce 2
-        # Lk, supk = self.filter(total_sample, map2, self.thresh)
-        # print(supk)
+        # Map2 + Reduce 2
+        Lk, supk = self.filter(total, map2, self.thresh)
+        print('final result '+'========='*20, '\n', supk)
+
+        # 保存结果
+        with open(save_to, 'a', encoding='utf-8-sig') as f:
+            for i in Lk:
+                print(set(i))
+                f.write(str(set(i))+'\r')
 
 
-
-
-
-            
+    
 if __name__ == "__main__":
 
     p, n, fs = next(os.walk('./dataset'))
     dataset = [p +'/'+f for f in fs if not '.gz' in f]
     
 
-    for data in dataset[1:2]:
+    for data in dataset:
+        rr = 0
         print('dataset:', data)
         son = SONAlg(rate=0.3, thresh=0.1)
-        son.run(data)
-
-        # L, supportData = son.run(data, less_sample_test=False)
-        # print('-'*50)
-        # print(L[:-1])
-        # print('-'*50)
-        # del sra
+        son.run(data, save_to='./result/result_{}.txt'.format(rr))
+        rr += 1
