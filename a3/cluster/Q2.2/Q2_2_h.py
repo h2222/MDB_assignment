@@ -31,7 +31,6 @@ class Kmean:
     def initialize(self, data, clss):
         self.cls = clss
         self.size = len(data)
-        
         self.data_cls = mat(zeros((self.size, 2))) # clusterAssment
         
         data_idx = [i for i in range(self.size)]
@@ -86,7 +85,7 @@ class Kmean:
     
         plt.title('k-means cluster')      
         plt.show()
-        
+
 
     def run(self, path, keep, clss=3):
         self.data = self.load(path=path, keep=keep)
