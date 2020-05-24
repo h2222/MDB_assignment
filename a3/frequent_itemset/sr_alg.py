@@ -98,9 +98,9 @@ class SimpleRondomAlg:
         
         if not less_sample_test:
             sample = self.sample(path=path)
-            # print(sample[:10])
+            print(sample[:10])
             # print('sample size:', len(sample))
-        else:
+        else:   
             sample = [[1, 3, 4], [2, 3, 5], [1, 2, 3, 5], [2, 5]]
         
         sample = list(map(set, sample))
@@ -131,12 +131,29 @@ if __name__ == "__main__":
     p, n, fs = next(os.walk('./dataset'))
     dataset = [p +'/'+f for f in fs if not '.gz' in f]
     
-
+    print(dataset[5])
+    rr = 0
+    #               0       1           2       3       4       5       6
+    # dataset = [chess,  connect,  mushroom,   pumsb,  pumsb,  T10,    T40  ]
     for data in dataset[5:6]:
+        rate=0.1
         print('dataset:', data)
-        sra = SimpleRondomAlg(rate=0.3, thresh=0.1)
+        sra = SimpleRondomAlg(rate=rate, thresh=0.1)
         L, supportData = sra.run(data, less_sample_test=False)
         print('-'*50)
         print(L[:-1])
         print('-'*50)
+        
+        # save result
+        save_to = './result/result_sra_{}_{}_.txt'.format(rr, rate)
+        if os.path.exists(save_to):
+            os.remove(save_to)
+            open(save_to, 'w', encoding='utf-8-sig')
+        
+        with open(save_to, 'a', encoding='utf-8-sig') as f:
+            for x in L[:-1]:
+                for i in x:
+                    f.write(str(set(i))+'\r')
+
+        rr += 1
         del sra
