@@ -1,6 +1,10 @@
 ### MDB assignment2
 
 
+#### jiaxiang.hao a1748270@student.adelaide.edu.au
+#### guangyu.chen a1776429@student.adelaide.edu.au
+
+
 1. Exercise 1 and 2 figure are in graph path.
 2. `python PageRank.py ` run file and get result, the dataset<br>
 `sample_test_dn.txt` and `sample_test_scc.txt` are two small dataset for <br>

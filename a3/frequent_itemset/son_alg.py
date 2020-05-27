@@ -1,59 +1,57 @@
 # coding = utf-8
 
 import os
+import pandas as pd
 from random import sample
 from multiprocessing import Pool, cpu_count
 from functools import partial
 
 class SONAlg:
-    def __init__(self, rate, thresh):
+    def __init__(self, split_num, rate):
         self.rate = rate
-        self.thresh = thresh
         self.cpu_num = cpu_count()
         self.sample = None
-
+        self.split_num = split_num
+        self.data_size = None
 
     # set number of blocks. Generally, we think that the number of block equal to the number of CPU cores
-    def split_block(self, path='./data_path'):
+    def split_block(self, path='./data_path', split_num = 0):
         process_size = [0]
         process_sl = []
 
-        # compute the size of block. For example, there are 1000 data,  we split data as 5 blocks, so 1 block has 200 data
-        f = open(path, 'r', encoding='utf-8')
-        num = len(f.readlines())
-        part = num // self.cpu_num
-        final = num % self.cpu_num
-        process_size += [part]*self.cpu_num + [final]
-        
-        # set begin and end position. For example, [0, 200) [200, 300) ... [800, 1000)
-        for i in range(len(process_size)):
-            if process_size[i] != process_size[-1]:
-                process_size[i+1] += process_size[i]
+        df = pd.read_csv(path, header=None, encoding='utf-8-sig')
+        self.data_size = len(df)
 
-        for i in range(len(process_size))[:-1]:
-            start = process_size[i]
-            end = process_size[i+1]
-            process_sl += [(start, end)]
-        del f
+        # split block
+        split_size = self.data_size // split_num
+        remain = self.data_size % split_num
+        process_sl = [[i, i+split_size] for i in range(0, self.data_size, split_size)]        
+        # add remain data
+        process_sl[-1][1] += remain
         return process_sl
 
 
-    def sample_data(self, se, path='./data_path'):        
+    def sample_data(self, se, path='./data_path', rate=1):        
         s = []
         total = 0
         remain = 0
-        with open(path, encoding='utf-8') as f:
-            #  splite data as block
-            for line in f.readlines()[se[0]:se[1]]:
-                line2 = [i for i in map(int, line.split(' ')[:-1])]
-                num = int(len(line2)*self.rate)
-                num = 1 if num < 1 else num
-                ss =list(sample(line2, num))
-                s.append(ss)
 
-            print('{0} - {1} sample complete, data is {2}, Process ID:{3}'.format(se[0], se[1], path, os.getpid()))
-            del f            
-            return s
+        # split block
+        df = pd.read_csv(path, header=None, encoding='utf-8-sig')
+        if se != None:
+            df = df.loc[se[0]:se[1]]
+
+        # simpling
+        # df = df.sample(frac=rate)
+
+        ss = []
+        for _, x in df.iterrows():
+            s = list(x)[0].strip().split(' ')
+            s = list(map(int, s))
+            ss.append(s)
+        if se != None:
+            print('the chuck between {0} - {1}, data is {2}, Process ID:{3}'.format(se[0], se[1], path, os.getpid()))
+        return ss
 
     
     def createC1(self, dataset):
@@ -66,7 +64,7 @@ class SONAlg:
         return list(map(frozenset, C1))
 
 
-    def filter(self, D, Ck, minsupport):
+    def filter(self, D, Ck):
         itemset = {}
         for tid in D:
             for can in Ck:
@@ -81,15 +79,19 @@ class SONAlg:
         retList = []
         supportData = {}
         i = 0        
+        bp =  self.split_num / self.data_size
 
         for k in itemset:
             support = itemset[k] / numItems
+
+            # if support > (1/ bp)*bp*minsupport:
             supportData[k] = support
+                # retList += [k]
             i += 1            
         
         supportData  = dict(sorted(supportData.items(), key=lambda  x: x[1], reverse=True))
         supportData_v2 = {}
-        for _, k in zip(range(int(i*minsupport)), supportData):
+        for _, k in zip(range(7), supportData):
             supportData_v2[k] = supportData[k]
             retList += [k]
 
@@ -118,18 +120,18 @@ class SONAlg:
         
         self.sample = list(map(set, sample))
         C1 = self.createC1(self.sample)
-        L1, supportData=self.filter(self.sample, C1, self.thresh) 
+        L1, supportData=self.filter(self.sample, C1) 
         L = [L1]
         k = 2
 
         while(len(L[k-2]) > 0):
             Ck = self.apriori_gen(L[k-2], k)
-            Lk, supk = self.filter(self.sample, Ck, self.thresh)
+            Lk, supk = self.filter(self.sample, Ck)
             supportData.update(supk)
             L.append(Lk)
             k += 1
         
-        print('good run SRA, Process ID:{}'.format(os.getpid()))
+        print('good run Apriori, Process ID:{}'.format(os.getpid()))
         return L[:-1]
 
 
@@ -142,26 +144,26 @@ class SONAlg:
         
         p = Pool(self.cpu_num)
         # get splited block 
-        process_sl = self.split_block(path=path)        
-        print(process_sl)
+        process_sl = self.split_block(path=path, split_num=self.split_num)        
+        print(len(process_sl))
 
         # based on the beign and end position to get spliting data
-        sample_data_v2 = partial(self.sample_data, path=path)
+        sample_data_v2 = partial(self.sample_data, path=path, rate=self.rate)
         son_r = p.map(sample_data_v2, process_sl)
 
         # because the last sample size is smaller than other's, we add last block add to other blocks.
-        son_r[-2] += son_r[-1]
-        son_r = son_r[:-1]
+        if len(son_r[-1]) < (len(son_r[-2]) / 2):
+            son_r[-2] += son_r[-1]
+            son_r = son_r[:-1]
         p.close()
 
-        # Simple Randomized Alg (Map1)
+        # run Apriori in different chuck
         p2 = Pool(self.cpu_num)
         apriori_v2 = partial(self.apriori, path=path, less_sample_test=False)
         multi_sra_r = p2.map(apriori_v2, son_r)  
         p2.close()
-        
 
-        # Reduce 1
+        # collect candidate itemset from different chuck
         map1 = set()
         for block in multi_sra_r:
             for item in block:
@@ -170,18 +172,9 @@ class SONAlg:
         map2 = list(map1)
         print('results from different parts'+'========'*20, ' \n', map2, '\n', '========'*20)
 
-        # total data, (0, -1) mean begin to end
-        total = self.sample_data(se=(0, -1), path=path)
-        total = list(map(set, total))
-
-        # Map2 + Reduce 2
-        Lk, supk = self.filter(total, map2, self.thresh)
-        print('final result '+'========='*20, '\n', supk)
-
         # save_result
         with open(save_to, 'a', encoding='utf-8-sig') as f:
-            for i in Lk:
-                print(set(i))
+            for i in map2:
                 f.write(str(set(i))+'\r')
 
 
@@ -193,10 +186,12 @@ if __name__ == "__main__":
     
     #               0       1           2       3       4       5       6
     # dataset = [chess,  connect,  mushroom,   pumsb,  pumsb,  T10,    T40  ]
-    for data in dataset[5:6]:  # set the dataset that you want to test 
-        rr = 0
-        rate = 0.1
-        print('dataset:', data)
-        son = SONAlg(rate=rate, thresh=0.1)
-        son.run(data, save_to='./result/result_son_{0}_{1}_.txt'.format(rr, rate))
-        rr += 1
+    rr = 'T40'
+    rate = 1 # fixed 1
+    if not os.path.exists('./result/'+rr):
+        os.mkdir('./result/'+rr)
+    save_path = './result/'+rr+'/result_son_{0}_{1}_.txt'.format(rr, rate)
+    
+    for data in dataset[6:] :  # set the dataset that you want to test 
+        son = SONAlg(rate=rate,  split_num=10)
+        son.run(data, save_to=save_path)

@@ -1,7 +1,8 @@
 # coding = utf-8
 
-import os, sys
+import os
 from random import sample
+import pandas as pd
 
 
 
@@ -10,23 +11,19 @@ class SimpleRondomAlg:
         self.rate = rate
         self.thresh = thresh
 
-    def sample(self, path='./data_path'):
-        s = []
-        with open(path, encoding='utf-8') as f:
-            for line in f.readlines():
-                # pre-preparing
-                line2 = [i for i in map(int, line.split(' ')[:-1])]
-                # total * (toal * rate) = num
-                num = int(len(line2)*self.rate)
-                # sample
-                # if num < 1 , set the sample number to 1
-                num = 1 if num < 1 else num
-                ss = list(sample(line2, num))
-                s.append(ss)
-        # relase memory
-        # print(sys.getsizeof(f.readlines()))
-        del f
-        return s
+
+    def sample_v2(self, path='./data_path', rate=0.01):
+        df =pd.read_csv(path, header=None, encoding='utf-8-sig')
+        # shuffle data and sampling data
+        df = df.sample(frac=rate).reset_index(drop=True)
+        
+        ss = []
+        for i, x in df.iterrows():
+            s = list(x)[0].split(' ')[:-1]
+            s = list(map(int, s))
+            ss.append(s)
+        return ss
+
 
     
     def createC1(self, dataset):
@@ -64,18 +61,18 @@ class SimpleRondomAlg:
         for k in itemset:
             support = itemset[k] / numItems
             # filtering
-            # if support >= (minsupport/100):    ## 修改thresh hold 规则
-                # retList += [k]
-            supportData[k] = support
+            if support >= (minsupport/100):    ## 修改thresh hold 规则
+                retList += [k]
+                supportData[k] = support
             i += 1
 
         supportData  = dict(sorted(supportData.items(), key=lambda  x: x[1], reverse=True))        
-        supportData_v2 = {}
-        for _, k in zip(range(int(i*minsupport)), supportData):
-            supportData_v2[k] = supportData[k]
-            retList += [k]
+        # supportData_v2 = {}
+        # for _, k in zip(range(int(i)), supportData):
+        #     supportData_v2[k] = supportData[k]
+        #     retList += [k]
 
-        return retList, supportData_v2
+        return retList, supportData
 
 
     def apriori_gen(self, Lk, k):
@@ -90,14 +87,14 @@ class SimpleRondomAlg:
                 if L1 == L2:
                     retList.append(Lk[i] | Lk[j])
 
-        # print(retList)
+        print(retList)
         return retList
         
 
     def run(self, path='data_path', less_sample_test=False):
         
         if not less_sample_test:
-            sample = self.sample(path=path)
+            sample = self.sample_v2(path=path, rate=self.rate)
             print(sample[:10])
             # print('sample size:', len(sample))
         else:   
@@ -131,21 +128,21 @@ if __name__ == "__main__":
     p, n, fs = next(os.walk('./dataset'))
     dataset = [p +'/'+f for f in fs if not '.gz' in f]
     
-    print(dataset[5])
-    rr = 40
-    #               0       1           2       3       4       5       6
-    # dataset = [chess,  connect,  mushroom,   pumsb,  pumsb,  T10,    T40  ]
-    for data in dataset[6:]:
-        rate=0.01
+    rr = 'chess'
+    rate=0.1
+    #               0       1           2       3       4            5       6
+    # dataset = [chess,  connect,  mushroom,   pumsb,  pumsb_star,  T10,    T40  ]
+    for data in dataset[0:1]:
         print('dataset:', data)
-        sra = SimpleRondomAlg(rate=rate, thresh=0.1)
+        sra = SimpleRondomAlg(rate=rate, thresh=96)
+
         L, supportData = sra.run(data, less_sample_test=False)
         print('-'*50)
         print(L[:-1])
         print('-'*50)
          
         # save result
-        save_to = './result/T40/result_sra_{}_{}_.txt'.format(rr, rate)
+        save_to = './result/'+rr+'/result_sra_{}_{}_.txt'.format(rr, rate)
         if os.path.exists(save_to):
             os.remove(save_to)
             open(save_to, 'w', encoding='utf-8-sig')
@@ -154,6 +151,4 @@ if __name__ == "__main__":
             for x in L[:-1]:
                 for i in x:
                     f.write(str(set(i))+'\r')
-
-        rr += 1
         del sra
