@@ -83,7 +83,8 @@ class Kmean:
             plt.plot(self.centroids[i,0], self.centroids[i,1],markcentroids[i],markersize=10,label=label[i],c=c[i])
             plt.legend(loc = 'best') 
     
-        plt.title('k-means cluster')      
+        plt.title('k-means cluster') 
+        plt.savefig('k-mean')     
         plt.show()
 
 

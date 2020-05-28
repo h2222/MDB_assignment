@@ -186,12 +186,14 @@ if __name__ == "__main__":
     
     #               0       1           2       3       4       5       6
     # dataset = [chess,  connect,  mushroom,   pumsb,  pumsb,  T10,    T40  ]
+    # params
     rr = 'T40'
-    rate = 1 # fixed 1
+    split_num = 10
+    
     if not os.path.exists('./result/'+rr):
         os.mkdir('./result/'+rr)
     save_path = './result/'+rr+'/result_son_{0}_{1}_.txt'.format(rr, rate)
     
     for data in dataset[6:] :  # set the dataset that you want to test 
-        son = SONAlg(rate=rate,  split_num=10)
+        son = SONAlg(rate=1,  split_num=split_num)
         son.run(data, save_to=save_path)

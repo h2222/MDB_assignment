@@ -2,6 +2,7 @@
 
 
 '''
+层次聚类
  implement hierarchical cluster with a list of data [1, 2, 3....]
 '''
 
@@ -11,37 +12,38 @@ from random import randint
 
 def hcluster(data=[1,4,9,16,25,36,49,64,81], cluster={}, centroid_list=[]):
 
-    # the condition that stop the recursion 
-    # if the data length less than 2, return final data(final centroid), cluster, and centroid_list
+    # 出递归条件, data长度 小于 2, 两聚类中心就停
     if len(data) <= 2:
         return data, cluster, centroid_list
 
     result = []
-    min_d = np.inf # initialization, c1 and c2 are 2 point of minimized distance, and mid_d is minimized distance.
+    min_d = np.inf # 初始化, c1 c2 为距离最短的两个点, mid_d他们之间的最短距离
     c1 = -99
     c2 = -99
-    for x, y in combinations(data, 2):# find mid_d and c1, c2
+    for x, y in combinations(data, 2): # 循环一下, 算一下距离, 找 c1 c2
         distance = np.abs(x - y)
         if distance < min_d:
             min_d = distance
             c1 = x
             c2 = y
     
-    centroid = np.mean([c1, c2]) # caculate centroid and save it into centroid_list
+    centroid = np.mean([c1, c2]) # 算中心, 并且把每次的中心储储起来
     centroid_list.append(centroid)
 
 
-    # if the cluster is dict, the key(str) is cluster name, and value(list) is the value in the cluster.
-    # first, there are nothing in cluster, so we build the first cluster, the value of first cluster are c1 and c2 
+    # 建立一个空聚类, 第一次里面啥都没有, 建立一个新cluster, 并且把c1 c2 添加进去
+    # 因为聚类的类别绝对不能重复, 所以采样hash法来, 实现
     if cluster == {}:
         cluster['C'+str(hash(centroid))] = []
         cluster['C'+str(hash(centroid))] += [c1]
         cluster['C'+str(hash(centroid))] += [c2]
     else:
-        # there are different condition in here  
-        # 1. c1 is centroid, and c2 is not centroid, so we put c2 in c1's cluster
-        # 2. c2 is centroid, and c1 is not centroid, so we put c1 in c2's cluster
-        # 3. both c1 and c2 are not centroids, so we build a new cluster and put c1 and c2 into it.
+        # 后面有聚类了, 判断一下c1 c2是不是中心点,  
+        # 分几种情况
+        # 1, c1 为中心, c2不是, 把c2并入c1的聚类中
+        # 2, c2 为中心点, c1不是, 把c1并入c2的聚类中
+        # 3, c1 c2 都不是中心点, 直接建立一个新聚类把c1 c2放进去
+        # 这样做有一个缺点, 不能实现聚类融合, 就是如果c1 c2 分别是两个聚类的中心, 边界会挤压但不会融合
         c1_cen = c1 in centroid_list
         c2_cen = c2 in centroid_list
         keys = cluster.keys()
@@ -55,13 +57,13 @@ def hcluster(data=[1,4,9,16,25,36,49,64,81], cluster={}, centroid_list=[]):
                 cluster['C'+str(hash(centroid))] += [c2]
                 cluster['C'+str(hash(centroid))] += [c1]
 
-    # we remove the c1 and c2 from data and put new centroid into data
+    # 从data 中移除 c1 和 c2 并添加 中心, 制作新的数据
     data.remove(c1)
     data.remove(c2)
     data.append(centroid)
     print('good')
 
-    # do the recursive method, and use new data
+    # 递归新数据, 聚类收集字典 和 中心点 list 一块得递归
     result, cluster, centroid_list = hcluster(data=data, cluster=cluster, centroid_list=centroid_list)
     
     return result, cluster, centroid_list    
@@ -69,5 +71,7 @@ def hcluster(data=[1,4,9,16,25,36,49,64,81], cluster={}, centroid_list=[]):
 if __name__ == "__main__":
     r, c, l = hcluster()
 
-    print('cluster :\n', c) 
+    print(r) # 最终聚类中心
+    print(c) # 聚类字典
+    print(l) # 每次的中心点
 

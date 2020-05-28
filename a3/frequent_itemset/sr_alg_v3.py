@@ -127,14 +127,17 @@ if __name__ == "__main__":
 
     p, n, fs = next(os.walk('./dataset'))
     dataset = [p +'/'+f for f in fs if not '.gz' in f]
-    
+
+    ## params    
     rr = 'chess'
     rate=0.1
+    thresh = 96
+
     #               0       1           2       3       4            5       6
     # dataset = [chess,  connect,  mushroom,   pumsb,  pumsb_star,  T10,    T40  ]
     for data in dataset[0:1]:
         print('dataset:', data)
-        sra = SimpleRondomAlg(rate=rate, thresh=96)
+        sra = SimpleRondomAlg(rate=rate, thresh=thresh)
 
         L, supportData = sra.run(data, less_sample_test=False)
         print('-'*50)
